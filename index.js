@@ -8,6 +8,14 @@ const port = 3000;
 
 const cursos = [ 'nodejs', 'Javascript', 'React Native'];
 
+// Middleware global - executou independentemente da rota
+server.use((req,res, next) => {
+    console.log(`>>>URL chamada: ${req.url}`);
+
+    // para seguir o fluxo de execução
+    return next;
+});
+
 // query params = ?nome=nodejs
 // Route params = /curso/2
 // Request body =  um objeto dentro do corpo da requisição
@@ -20,20 +28,40 @@ server.get('/cursos', (req, res) => {
     return res.json(cursos);
 });
 
+function check(req, res, next) { 
+    if (!req.body.name) {
+        return res.status(400).json({ error: "Nome do curso é obrigatorio." });
+    }
+
+    return next();
+}
+
+function checkIndex(req, res, next) { 
+    const curso = cursos[req.params.index];
+
+    if(curso) {
+       return res.status(400).json({ error: "O curso não existe." });
+    }
+
+    req.curso = curso;
+    
+    return next();
+}
+
 // /: para dizer que esta esperando um route params
-server.get('/cursos/:index', (req, res) => { 
+server.get('/cursos/:index', checkIndex, (req, res) => { 
     console.log("Rota /cursos/:index acessada");
 
-    const index = req.params.index; //localhost:3000/curso/2?nome=PHP
+    //const index = req.params.index; //localhost:3000/curso/2?nome=PHP
 
-    const nome = req.query.nome; //localhost:3000/curso?nome=JavaScript
+    //const name = req.query.name; //localhost:3000/curso?nome=JavaScript
 
     // res.send('Hello world!!');
     // res.json({ curso: `Aprendendo ${nome} - id: ${id}` })
-    return res.json(cursos[index]);
+    return res.json(req.curso);
 });
 
-server.post('/cursos', (req, res) => {
+server.post('/cursos', check, (req, res) => {
     const name = req.body.name;
     cursos.push(name);
 
@@ -41,7 +69,7 @@ server.post('/cursos', (req, res) => {
     return res.json(cursos);
 });
 
-server.put('/cursos/:index', (req, res) => {
+server.put('/cursos/:index', check, checkIndex, (req, res) => {
     const index = req.params.index;
     const name = req.body.name;
 
@@ -50,7 +78,7 @@ server.put('/cursos/:index', (req, res) => {
     return res.json(cursos);
 });
 
-server.delete('/cursos/:index', (req, res) => {
+server.delete('/cursos/:index', checkIndex, (req, res) => {
     const index = req.params.index;
 
     cursos.splice(index, 1);
